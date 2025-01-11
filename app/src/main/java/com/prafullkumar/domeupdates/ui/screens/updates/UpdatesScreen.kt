@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +32,9 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
@@ -37,11 +42,15 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -59,19 +68,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpdatesScreen(
     viewModel: UpdatesViewModel = hiltViewModel(), navController: NavController
 ) {
     val posts by viewModel.posts.collectAsState()
+    val sheetState = rememberModalBottomSheetState()
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     Scaffold(
         topBar = {
             OlympicsTopAppBar()
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-
-            }) {
+            FloatingActionButton(onClick = { showBottomSheet = true }) {
                 Icon(Icons.Outlined.Add, contentDescription = "Add Post")
             }
         },
@@ -92,6 +103,12 @@ fun UpdatesScreen(
             }
         }
     }
+    if (showBottomSheet) {
+        AddPostBottomSheet(
+            viewModel = viewModel,
+            onDismiss = { showBottomSheet = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,7 +127,7 @@ fun OlympicsTopAppBar() {
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary
                     ) {
-                        // You can replace this with your actual Olympic logo
+
                     }
                     Text(
                         text = "Olympics Paris 2024",
@@ -149,7 +166,87 @@ fun OlympicsTopAppBar() {
             }
         }
     }
+
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddPostBottomSheet(
+    viewModel: UpdatesViewModel,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Create Post",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Title TextField
+            OutlinedTextField(
+                value = viewModel.newPost.title,
+                onValueChange = { viewModel.newPost = viewModel.newPost.copy(title = it) },
+                label = { Text("Title") },
+                placeholder = { Text("Enter post title") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                singleLine = true
+            )
+
+            // Body TextField
+            OutlinedTextField(
+                value = viewModel.newPost.body,
+                onValueChange = { viewModel.newPost = viewModel.newPost.copy(body = it) },
+                label = { Text("Content") },
+                placeholder = { Text("What's on your mind?") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .padding(bottom = 16.dp),
+                maxLines = 5
+            )
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Cancel")
+                }
+
+                Button(
+                    onClick = {
+                        viewModel.addPost()
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = viewModel.newPost.title.isNotBlank() && viewModel.newPost.body.isNotBlank()
+                ) {
+                    Text("Post")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+// Extension to check if post is valid
+private val Post.isValid: Boolean
+    get() = title.isNotBlank() && body.isNotBlank()
 
 @Composable
 fun PostCard(

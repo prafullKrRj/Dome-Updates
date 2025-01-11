@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PostsDao {
-    @Query("SELECT * FROM PostEntity")
+    @Query("SELECT * FROM PostEntity order by timestamp desc")
     fun getAllPosts(): Flow<List<PostEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
