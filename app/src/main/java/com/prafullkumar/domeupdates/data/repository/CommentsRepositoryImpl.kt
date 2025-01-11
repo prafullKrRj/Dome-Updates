@@ -12,7 +12,7 @@ import com.prafullkumar.domeupdates.domain.model.PostWithComments
 import com.prafullkumar.domeupdates.domain.repository.CommentsRepository
 import com.prafullkumar.domeupdates.util.Resource
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -26,7 +26,7 @@ class CommentsRepositoryImpl @Inject constructor(
             comments.map { it.toComment() }
         }
 
-    override suspend fun addComment(comment: Comment): Flow<Resource<Boolean>> = flow {
+    override suspend fun addComment(comment: Comment): Flow<Resource<Boolean>> = channelFlow {
         domeUpdatesDatabase.withTransaction {
             val id = commentsDao.insertComment(comment.toCommentEntity())
             val post = postsDao.getPostById(comment.postId)
@@ -35,20 +35,18 @@ class CommentsRepositoryImpl @Inject constructor(
                     numberOfComments = post.numberOfComments + 1,
                 )
             )
-            emit(Resource.Success(response > 0))
+            send(Resource.Success(response > 0))
         }
     }
 
-    override fun getPostWithComments(postId: Long): Flow<PostWithComments> = flow {
-        domeUpdatesDatabase.withTransaction {
-            val post = postsDao.getPostById(postId) ?: throw IllegalStateException("Post not found")
-            commentsDao.getCommentsOfPost(postId).collect { comments ->
-                emit(
-                    PostWithComments(
-                        post = post.toPost(),
-                        comments = comments.map { it.toComment() })
-                )
-            }
+    override fun getPostWithComments(postId: Long): Flow<PostWithComments> = channelFlow {
+        val post = postsDao.getPostById(postId) ?: throw IllegalStateException("Post not found")
+        commentsDao.getCommentsOfPost(postId).collect { comments ->
+            send(
+                PostWithComments(
+                    post = post.toPost(),
+                    comments = comments.map { it.toComment() })
+            )
         }
     }
 }

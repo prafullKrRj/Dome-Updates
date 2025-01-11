@@ -26,7 +26,7 @@ fun AppNavigation(navController: NavHostController) {
         }
         composable<Route.Comments> { backStackEntry ->
             val postId = backStackEntry.arguments?.getInt("postId") ?: 0
-            CommentsScreen()
+            CommentsScreen(navController = navController)
         }
     }
 }

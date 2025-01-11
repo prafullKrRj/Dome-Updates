@@ -1,5 +1,6 @@
 package com.prafullkumar.domeupdates.data.repository
 
+import android.util.Log
 import com.prafullkumar.domeupdates.data.local.posts.PostsDao
 import com.prafullkumar.domeupdates.data.mappers.toPost
 import com.prafullkumar.domeupdates.data.mappers.toPostEntity
@@ -25,7 +26,14 @@ class PostsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun savePost(post: Post): Flow<Boolean> = flow {
-        val response = postsDao.insertPost(post.toPostEntity())
+        Log.d("PostsRepositoryImpl", "savePost: $post")
+        val response = postsDao.insertPost(post.copy(id = 0).toPostEntity())
+        Log.d("PostsRepositoryImpl", "savePost: $response")
         emit(response > 0)
+    }
+
+    override suspend fun savePosts(posts: List<Post>) {
+        Log.d("PostsRepositoryImpl", "savePosts: $posts")
+        postsDao.insertPosts(posts.map { it.toPostEntity() })
     }
 }

@@ -7,4 +7,5 @@ interface PostsRepository {
     fun getPosts(): Flow<List<Post>>
     suspend fun getPostById(id: Long): Post?
     suspend fun savePost(post: Post): Flow<Boolean>
+    suspend fun savePosts(posts: List<Post>)
 }
