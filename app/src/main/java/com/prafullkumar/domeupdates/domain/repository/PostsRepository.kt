@@ -1,6 +1,7 @@
 package com.prafullkumar.domeupdates.domain.repository
 
 import com.prafullkumar.domeupdates.domain.model.Post
+import com.prafullkumar.domeupdates.domain.model.PostWithComments
 import kotlinx.coroutines.flow.Flow
 
 interface PostsRepository {
@@ -8,4 +9,5 @@ interface PostsRepository {
     suspend fun getPostById(id: Long): Post?
     suspend fun savePost(post: Post): Flow<Boolean>
     suspend fun savePosts(posts: List<Post>)
+    suspend fun savePostsWithComments(postWithComments: List<PostWithComments>)
 }

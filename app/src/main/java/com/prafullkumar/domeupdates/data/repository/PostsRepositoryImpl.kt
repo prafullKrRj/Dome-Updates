@@ -1,10 +1,13 @@
 package com.prafullkumar.domeupdates.data.repository
 
 import android.util.Log
+import com.prafullkumar.domeupdates.data.local.comments.CommentsDao
 import com.prafullkumar.domeupdates.data.local.posts.PostsDao
+import com.prafullkumar.domeupdates.data.mappers.toCommentEntity
 import com.prafullkumar.domeupdates.data.mappers.toPost
 import com.prafullkumar.domeupdates.data.mappers.toPostEntity
 import com.prafullkumar.domeupdates.domain.model.Post
+import com.prafullkumar.domeupdates.domain.model.PostWithComments
 import com.prafullkumar.domeupdates.domain.repository.PostsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -14,6 +17,7 @@ import javax.inject.Inject
 
 class PostsRepositoryImpl @Inject constructor(
     private val postsDao: PostsDao,
+    private val commentDao: CommentsDao
 ) : PostsRepository {
     override fun getPosts(): Flow<List<Post>> {
         return postsDao.getAllPosts().map { posts ->
@@ -35,5 +39,16 @@ class PostsRepositoryImpl @Inject constructor(
     override suspend fun savePosts(posts: List<Post>) {
         Log.d("PostsRepositoryImpl", "savePosts: $posts")
         postsDao.insertPosts(posts.map { it.toPostEntity() })
+    }
+
+
+    override suspend fun savePostsWithComments(postWithComments: List<PostWithComments>) {
+        postWithComments.forEach { post ->
+            if (post.post == null) return@forEach
+            val postId = postsDao.insertPost(post.post.toPostEntity())
+            post.comments.forEach { comment ->
+                commentDao.insertComment(comment.copy(postId = postId).toCommentEntity())
+            }
+        }
     }
 }

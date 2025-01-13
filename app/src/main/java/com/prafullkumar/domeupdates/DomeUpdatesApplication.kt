@@ -44,8 +44,9 @@ object AppModule {
     @Provides
     fun providesPostsRepository(
         postsDao: PostsDao,
+        commentsDao: CommentsDao
     ): PostsRepository {
-        return PostsRepositoryImpl(postsDao)
+        return PostsRepositoryImpl(postsDao, commentsDao)
     }
 
     @Singleton

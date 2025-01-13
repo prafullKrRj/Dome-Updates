@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -49,7 +50,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,14 +76,16 @@ fun UpdatesScreen(
     val posts by viewModel.posts.collectAsState()
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+//    val scope = rememberCoroutineScope()
     Scaffold(
         topBar = {
             OlympicsTopAppBar()
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showBottomSheet = true }) {
-                Icon(Icons.Outlined.Add, contentDescription = "Add Post")
+            if (posts.isNotEmpty()) {
+                FloatingActionButton(onClick = { showBottomSheet = true }) {
+                    Icon(Icons.Outlined.Add, contentDescription = "Add Post")
+                }
             }
         },
         floatingActionButtonPosition = FabPosition.Center,
@@ -101,13 +103,20 @@ fun UpdatesScreen(
                     navController.navigate(Route.Comments(post.id))
                 })
             }
+            if (posts.isEmpty()) {
+                item {
+                    EmptyPosts {
+                        showBottomSheet = true
+                    }
+                }
+            }
         }
     }
     if (showBottomSheet) {
         AddPostBottomSheet(
             viewModel = viewModel,
-            onDismiss = { showBottomSheet = false }
-        )
+            sheetState = sheetState,
+            onDismiss = { showBottomSheet = false })
     }
 }
 
@@ -117,38 +126,33 @@ fun OlympicsTopAppBar() {
     val selectedTabIndex by remember { mutableIntStateOf(2) } // Updates tab is selected by default (index 2)
 
     Column {
-        TopAppBar(
-            title = {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+        TopAppBar(title = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.size(32.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary
                 ) {
-                    Surface(
-                        modifier = Modifier.size(32.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary
-                    ) {
 
-                    }
-                    Text(
-                        text = "Olympics Paris 2024",
-                        fontWeight = FontWeight.Bold
-                    )
                 }
-            },
-            navigationIcon = {
-                IconButton(onClick = { }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                }
-            },
-            actions = {
-                IconButton(onClick = { }) {
-                    Icon(Icons.Default.Search, "Search")
-                }
-                IconButton(onClick = { }) {
-                    Icon(Icons.Default.Menu, "Menu")
-                }
+                Text(
+                    text = "Olympics Paris 2024", fontWeight = FontWeight.Bold
+                )
             }
-        )
+        }, navigationIcon = {
+            IconButton(onClick = { }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+            }
+        }, actions = {
+            IconButton(onClick = { }) {
+                Icon(Icons.Default.Search, "Search")
+            }
+            IconButton(onClick = { }) {
+                Icon(Icons.Default.Menu, "Menu")
+            }
+        })
 
         ScrollableTabRow(
             selectedTabIndex = selectedTabIndex,
@@ -172,12 +176,11 @@ fun OlympicsTopAppBar() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPostBottomSheet(
-    viewModel: UpdatesViewModel,
-    onDismiss: () -> Unit
+    viewModel: UpdatesViewModel, sheetState: SheetState, onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+        sheetState = sheetState,
+        onDismissRequest = onDismiss, shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
     ) {
         Column(
             modifier = Modifier
@@ -221,8 +224,7 @@ fun AddPostBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f)
+                    onClick = onDismiss, modifier = Modifier.weight(1f)
                 ) {
                     Text("Cancel")
                 }
@@ -233,7 +235,7 @@ fun AddPostBottomSheet(
                         onDismiss()
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = viewModel.newPost.title.isNotBlank() && viewModel.newPost.body.isNotBlank()
+                    enabled = viewModel.newPost.isValid
                 ) {
                     Text("Post")
                 }
@@ -244,19 +246,39 @@ fun AddPostBottomSheet(
     }
 }
 
+@Composable
+fun EmptyPosts(
+    onButtonClick: () -> Unit = {}
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "No posts available",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onButtonClick) {
+            Text("Add Post")
+        }
+    }
+}
+
 // Extension to check if post is valid
 private val Post.isValid: Boolean
     get() = title.isNotBlank() && body.isNotBlank()
 
 @Composable
 fun PostCard(
-    post: Post,
-    onCommentClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    post: Post, onCommentClick: () -> Unit = {}, modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RectangleShape,
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -288,9 +310,7 @@ fun PostCard(
 
                     Column {
                         Text(
-                            text = post.username,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 16.sp
+                            text = post.username, fontWeight = FontWeight.Medium, fontSize = 16.sp
                         )
                         Text(
                             text = formatTimestamp(post.timestamp),
@@ -302,8 +322,7 @@ fun PostCard(
 
                 IconButton(onClick = { }) { // more options
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More options"
+                        imageVector = Icons.Default.MoreVert, contentDescription = "More options"
                     )
                 }
             }
@@ -319,9 +338,7 @@ fun PostCard(
             }
             if (post.body.isNotEmpty()) {
                 Text(
-                    text = post.body,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    text = post.body, fontSize = 16.sp, modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
 
@@ -364,19 +381,16 @@ fun PostCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 TextButton(
-                    onClick = { },
-                    modifier = Modifier.weight(0.3f)
+                    onClick = { }, modifier = Modifier.weight(0.3f)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ThumbUp,
-                        contentDescription = "Like"
+                        imageVector = Icons.Default.ThumbUp, contentDescription = "Like"
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Like", fontSize = 13.sp)
                 }
                 TextButton(
-                    onClick = onCommentClick,
-                    modifier = Modifier.weight(0.3f)
+                    onClick = onCommentClick, modifier = Modifier.weight(0.3f)
                 ) {
                     Icon(
                         imageVector = ImageVector.vectorResource(id = R.drawable.outline_comment_24),
@@ -386,12 +400,10 @@ fun PostCard(
                     Text("Comment", fontSize = 13.sp)
                 }
                 TextButton(
-                    onClick = {},
-                    modifier = Modifier.weight(0.3f)
+                    onClick = {}, modifier = Modifier.weight(0.3f)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share"
+                        imageVector = Icons.Default.Share, contentDescription = "Share"
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Share", fontSize = 13.sp)
